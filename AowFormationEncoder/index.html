@@ -231,6 +231,25 @@
     async function preloadTemplates(){
       templates = {};
       const loaded = [];
+      const missing = [];
+      for (const code of TEMPLATE_CODES){
+        const url = `${TEMPLATE_BASE}/${code}.png`;
+        try{
+          const mat = await urlToGrayMat(url);
+          templates[String(code)] = mat;
+          loaded.push(code);
+        }catch(err){
+          missing.push(code);
+          console.warn('템플릿 누락:', url, err);
+        }
+      }
+      if (loaded.length){
+        els.tplList.innerHTML = `로드된 템플릿(<span class=ok>${loaded.length}</span>): ${loaded.join(', ')}${missing.length?`<br>누락(<span class=warn>${missing.length}</span>): ${missing.join(', ')}`:''}`;
+      } else {
+        els.tplList.innerHTML = `<span class=err>로드된 템플릿이 없습니다. TEMPLATE_BASE / TEMPLATE_CODES 및 /templates 경로를 확인하세요.</span>`;
+      }
+    };
+      const loaded = [];
       for (const code of TEMPLATE_CODES){
         const url = `${TEMPLATE_BASE}/${code}.png`;
         const mat = await urlToGrayMat(url);

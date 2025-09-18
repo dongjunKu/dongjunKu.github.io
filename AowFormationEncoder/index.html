@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>이미지 → 코드 (JSON/Base64) 변환</title>
+  <title>반죽 생성기</title>
   <style>
     :root { --bg:#0b1020; --card:#121a35; --muted:#98a2b3; --acc:#7c9cff; --line:#233055; }
     * { box-sizing: border-box; }
@@ -11,7 +11,7 @@
     header { padding: 24px; border-bottom:1px solid var(--line); backdrop-filter: blur(8px); position: sticky; top:0; background: linear-gradient(180deg, rgba(11,16,32,.9), rgba(11,16,32,.7)); z-index: 10; }
     h1 { margin:0; font-size: clamp(18px, 2.6vw, 28px); letter-spacing: .3px; }
     main { padding: 24px; max-width: 1100px; margin: 0 auto; display:grid; gap:20px; grid-template-columns: 1fr 420px; }
-    @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+    @media (max-width: 980px) { main { grid-template-columns: 1fr; gap:16px; padding:16px; } .grid { grid-template-columns: 1fr; } textarea { min-height:140px; } }
     .card { background: var(--card); border:1px solid var(--line); border-radius: 16px; padding: 16px; }
     .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
     .hint { color: var(--muted); font-size: 12px; }
@@ -27,25 +27,22 @@
     .ok { color:#86efac; }
     .warn { color:#fde68a; }
     .err { color:#fda4af; }
-    canvas { width:100%; background:#0b1330; border-radius:12px; border:1px solid #25356a; }
+    canvas { width:100%; height:auto; background:#0b1330; border-radius:12px; border:1px solid #25356a; }
     .footer { color: var(--muted); font-size: 12px; margin-top:8px; }
     .small { font-size:12px; color:#b8c2df; }
   </style>
 </head>
 <body>
   <header>
-    <h1>이미지 → 코드(JSON/Base64) 변환 · 서버리스(OpenCV.js)</h1>
-    <div class="small">브라우저 안에서만 실행됩니다 · 파일은 업로드되지 않습니다</div>
+    <h1>반죽 생성기</h1>
+    
   </header>
 
   <main>
     <section class="card">
       <div class="grid">
         <div>
-          <label>1) 템플릿 자동 로드 (호스트 고정 세트)</label>
-<div class="hint">/templates 폴더의 PNG들을 자동으로 불러옵니다 · 파일명=코드(예: <span class="mono">152.png</span>)</div>
-<div id=\"tplList\" class=\"hint\" style=\"margin-top:6px\">로드 대기…</div>
-<div style=\"margin-top:6px\"><progress id=\"tplProgress\" max=\"100\" value=\"0\" style=\"width:100%\"></progress></div>
+          <label>1) 템플릿 (고정 세트 자동 로드)</label></div>
         <div>
           <label>2) 스크린샷 이미지 선택</label>
           <input id="imgInput" type="file" accept="image/*" />
@@ -55,14 +52,13 @@
 
       <div class="row" style="margin-top:12px">
         <span class="pill">빈칸 RGB: <span class="mono" id="emptyRGBView">[246,238,213]</span></span>
-        <span class="pill">면적 허용오차: <span id="tolView">±10%</span></span>
         <span class="pill">그리드: 7×7</span>
       </div>
 
       <div class="row" style="margin-top:12px">
         <button id="runBtn" class="primary" disabled>변환 실행</button>
-        <button id="dlJsonBtn" disabled>JSON 다운로드</button>
-        <button id="dlB64Btn" disabled>Base64 다운로드</button>
+        <button id="copyJsonBtn">JSON 복사</button>
+        <button id="copyB64Btn">Base64 복사</button>
         <span id="status" class="hint"></span>
       </div>
 
@@ -77,7 +73,7 @@
         </div>
       </div>
 
-      <div class="footer">참고: Python <span class="mono">capture2code.py</span>의 로직을 OpenCV.js로 포팅한 브라우저 전용 구현입니다.</div>
+      
     </section>
 
     <aside class="card">
@@ -99,15 +95,14 @@
     const els = {
       imgInput: document.getElementById('imgInput'),
       runBtn: document.getElementById('runBtn'),
-      dlJsonBtn: document.getElementById('dlJsonBtn'),
-      dlB64Btn: document.getElementById('dlB64Btn'),
+      copyJsonBtn: document.getElementById('copyJsonBtn'),
+      copyB64Btn: document.getElementById('copyB64Btn'),
       jsonOut: document.getElementById('jsonOut'),
       b64Out: document.getElementById('b64Out'),
       status: document.getElementById('status'),
       canvas: document.getElementById('canvas'),
       log: document.getElementById('log'),
-      tplList: document.getElementById('tplList'),
-      tplProgress: document.getElementById('tplProgress')
+      tplList: document.getElementById('tplList')
     };
 
     let cvReady = false;
@@ -151,7 +146,15 @@
           // 캔버스 정사각 보정
           const size = Math.min(els.canvas.width, els.canvas.height);
           ctx.clearRect(0,0,els.canvas.width, els.canvas.height);
-          ctx.drawImage(img, 0, 0, size, size);
+          const cw = els.canvas.width, ch = els.canvas.height;
+          const scale = Math.min(cw / img.width, ch / img.height);
+          const dw = Math.floor(img.width * scale);
+          const dh = Math.floor(img.height * scale);
+          const dx = Math.floor((cw - dw) / 2);
+          const dy = Math.floor((ch - dh) / 2);
+          ctx.fillStyle = '#0b1330';
+          ctx.fillRect(0,0,cw,ch);
+          ctx.drawImage(img, dx, dy, dw, dh);
           const mat = cv.imread(els.canvas);
           resolve(mat);
         };
@@ -219,17 +222,27 @@
         const jsonStr = JSON.stringify(result, null, 2);
         els.jsonOut.value = jsonStr;
         els.b64Out.value = btoa(jsonStr);
-        els.dlJsonBtn.disabled = false;
-        els.dlB64Btn.disabled = false;
+        els.copyJsonBtn.disabled = false;
+        els.copyB64Btn.disabled = false;
         info('완료 ✅');
       }catch(err){ error('실패: '+err.message); console.error(err); }
     });
 
-    els.dlJsonBtn.addEventListener('click', ()=> downloadText('payload.json', els.jsonOut.value));
-    els.dlB64Btn.addEventListener('click', ()=> downloadText('payload.base64.txt', els.b64Out.value));
+    els.copyJsonBtn.addEventListener('click', ()=> copyToClipboard(els.jsonOut.value, 'JSON'));
+    els.copyB64Btn.addEventListener('click', ()=> copyToClipboard(els.b64Out.value, 'Base64'));
 
-    function downloadText(name, text){
-      const blob = new Blob([text], {type:'text/plain'});
+    function copyToClipboard(text, label){
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(()=>{
+        info(`${label} 복사 완료 ✅`);
+      }).catch(()=>{
+        // clipboard 실패 시 폴백
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); info(`${label} 복사 완료 ✅`);} catch(e){ error(`${label} 복사 실패`);} 
+        document.body.removeChild(ta);
+      });
+    });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob); a.download = name; a.click();
     }

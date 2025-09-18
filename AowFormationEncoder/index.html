@@ -116,7 +116,13 @@
 
     // 고정 세트 템플릿 설정 — 필요에 맞게 수정
     const TEMPLATE_BASE = './templates'; // 동일 호스트 정적 경로
-    const TEMPLATE_CODES = [152, 153, 201]; // 예시: 배포 시 실제 코드 목록으로 교체
+    const TEMPLATE_CODES = [
+      101,102,103,104,105,106,107,109,110,111,112,113,
+      124,125,126,132,133,134,142,143,144,145,146,147,148,149,150,151,
+      159,160,161,162,163,164,166,168,173,178,179,180,181,182,183,186,
+      188,189,191,192,193,198,199,200,201,202,203,210,211,212,213,214,
+      215,216,217,219,220
+    ]; // 예시: 배포 시 실제 코드 목록으로 교체
 
     function onOpenCvReady() {
       cv['onRuntimeInitialized'] = async () => {
@@ -230,28 +236,7 @@
 
     // 템플릿 자동 로더
     async function preloadTemplates(){
-      templates = {g`;
-        try{
-          const mat = await urlToGrayMat(url);
-          templates[String(code)] = mat;
-          loaded.push(code);
-          names.push(`${code}.png`);
-        }catch(err){
-          missing.push(code);
-          console.warn('템플릿 누락:', url, err);
-        } finally {
-          i++;
-          if (els.tplProgress) els.tplProgress.value = i;
-        }
-      }
-      if (loaded.length){
-        const list = names.map(n=>`<code>${n}</code>`).join(', ');
-        els.tplList.innerHTML = `로드됨 <span class=ok>${loaded.length}</span>개: ${list}` +
-          (missing.length ? `<br>누락 <span class=warn>${missing.length}</span>개: ${missing.map(c=>`<code>${c}.png</code>`).join(', ')}` : '');
-      } else {
-        els.tplList.innerHTML = `<span class=err>로드된 템플릿이 없습니다. TEMPLATE_BASE / TEMPLATE_CODES 및 /templates 경로를 확인하세요.</span>`;
-      }
-    }
+      templates = {};
       const loaded = [];
       for (const code of TEMPLATE_CODES){
         const url = `${TEMPLATE_BASE}/${code}.png`;
@@ -259,6 +244,7 @@
         templates[String(code)] = mat;
         loaded.push(code);
       }
+      if (els.tplProgress){ els.tplProgress.max = TEMPLATE_CODES.length; els.tplProgress.value = TEMPLATE_CODES.length; }
       els.tplList.textContent = `로드된 템플릿: ${loaded.join(', ')}`;
     }
 
